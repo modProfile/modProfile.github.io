@@ -1,0 +1,263 @@
+= modProfile Requirements Specification
+v0.0.1: First public draft
+:toc: left
+:toclevels: 4
+:page-layout: asciidoc
+:icons: font
+
+modProfile's goal is to disambiguate the term "modular" with respect to Java applications.
+This document outlines the requirements which "modular" Java applications need to fulfill in order for the respective stakeholders to benefit from the added value of modularity. The requirements expressed below aim to be generic and framework/platform agnostic. Any Java application that fulfills the requirements, is a modProfile compatible application regardless of the actual technology stack used to build it.
+
+
+[NOTE]
+.Work in progress
+====
+This document is a work in progress. It is shared with the sole purpose to invite people to contribute to it.
+====
+
+== Definitions
+
+=== Key words to indicate requirement levels
+
+This document uses the key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" according to http://www.ietf.org/rfc/rfc2119.txt[RFC 2119]. That is:
+
+ * [[MUST]] Word "MUST" or the terms "REQUIRED" or "SHALL", mean that the definition is an absolute requirement.
+ * [[MUSTNOT]] Phrases "MUST NOT" or "SHALL NOT", mean that the definition is an absolute prohibition.
+ * [[SHOULD]] Word "SHOULD" or the adjective "RECOMMENDED", mean that there may exist valid reasons in particular circumstances to ignore a particular item, but the full implications must be understood and carefully weighed before choosing a different course.
+ * [[SHOULDNOT]] Phrase "SHOULD NOT" or the adjective "NOT RECOMMENDED" mean that there may exist valid reasons in particular circumstances when the particular behavior is acceptable or even useful, but the full implications should be understood and the case carefully weighed before implementing any behavior described with this label.
+ * [[MAY]] "MAY" or the adjective "OPTIONAL", mean that an item is truly optional
+
+=== Key words to indicate roles of stakeholders
+
+* [[AUTHOR]] Word "AUTHOR" means the people or groups or organizations who are responsible for creating the <<application, application>>.
+* [[OWNER]] Word "OWNER" means the people or groups or organizations whose needs and requirements are being addressed by creating the <<application, application>> and are the direct beneficiaries of the <<application, application>>.
+* [[OPERATOR]] Word "OPERATOR" means the people or groups or organizations who are responsible for installing, configuring and maintaining the <<application, application>>.
+* [[USER]] Word "USER" means the people or groups or organizations who are using or interacting with the <<application, application>>.
+
+== Introduction
+
+=== Why modular applications?
+
+Well designed modular software applications provide evolvability and comprehensibility while shortening development time due to the following characteristics:
+
+Evolvability::
+* Single module can be (re)assembled and replaced without reassembling the whole application.
+* It is possible to make drastic changes to one module without a need to change others.
+* Modules can be tested independently.
+
+Comprehensibility::
+* A module can be written with very little knowledge of the code of other modules.
+* Each module's inputs, outputs and intended interface with other modules are well-defined.
+* The application can be studied one module at a time.
+* Application errors can be traced to specific module(s), thus limiting the scope of detailed error searching.
+
+
+=== Why "modular" is too ambiguous?
+
+In Java landscape the concept of "module" and "modular application" is used to describe various things. 
+
+https://www.osgi.org/developer/architecture/[OSGi] has been the de facto standard for building modular applications in Java before https://en.wikipedia.org/wiki/Java_Platform_Module_System[Java Platform Module System (JPMS)] was introduced in Java 9. While OSGi never used the word "module" _(OSGi modules are called "bundles")_, JPMS made the term a Java keyword.
+
+In addition to that, many higher level technologies, such as
+https://docs.spring.io/spring/docs/5.0.0.RC3/spring-framework-reference/overview.html#overview-modules[Spring],
+https://netbeans.org/features/platform/index.html[NetBeans],
+https://jboss-modules.github.io/jboss-modules/manual/[JBoss Modules],
+http://vertx.io/vertx2/mods_manual.html[Vert.x] and
+https://doc.akka.io/docs/akka/2.5.3/scala/guide/modules.html[Akka] to name a few, describe themselves as modular or claim to make the applications built with them, modular.
+
+Stating that given Java application is "modular" could be true with respect to given technology. However the term itself does not provide any information to the OWNER, OPERATOR nor the future AUTHOR about the evolvability and comprehensibility of the application.
+
+=== The goal of modProfile
+
+modProfile aims to establish a common understanding of what characteristics a "modular" Java application must have in order to provides evolvability and comprehensibility. It does so by specifying a set of requirements that modProfile compatible applications MUST comply to. This way ambiguity can be avoided when:
+
+  * a OWNER requires "modProfile compatible" application to ensure it's evolvable and comprehensible 
+  * an AUTHOR describes an application as "modProfile compatible" to indicate it's evolvable and comprehensible
+
+:sectnums:
+
+== Architectural Requirements
+
+[[application]]
+=== Application
+
+A software application is a complete product that performs certain tasks or activities for the benefit of the OWNER. A modProfile compatible application is assembled from of one or many <<modules, modules>> in a way that ensures: 
+
+  * evolvability to its OWNER 
+  * high flexibility to its OPERATOR 
+  * high comprehensibility to the original as well as any future AUTHOR
+
+
+====  Building blocks
+
+modProfile compatible application MUST consist of
+
+  * minimal immutable core (a.k.a. modular runtime), responsible for managing <<modules, modules>>
+  * set of <<modules, modules>> that are linked to (static) or installed into (dynamic) the core
+
+
+====  Distribution / Deliverables
+
+The application MUST be delivered to the OWNER in one or more of the following ways:
+
+  * as a whole (core + all <<modules, modules>>)
+  * as minimal executable application (core + some <<modules, modules>>) and remote module repository
+  * pre-installed on specific infrastructure (container, IoT device, cloud provider, ...)
+
+I all cases, it MUST provide means to the OPERATOR to reconfigure the application _(without the need to recompile nor rebuild it)_ in order to
+
+  * add/link additional <<modules, modules>>
+  * replace existing <<modules, modules>>
+  * remove/unlink additional <<modules, modules>>
+
+
+[[modules]]
+=== Modules
+
+Modules are artifacts containing both 
+
+  * physical resources _(classes, interfaces, enumerations, annotation types, ...)_ grouped into <<packages, packages>> 
+  * virtual resources _(<<services, services>>, connectors, adapters, ...)_. 
+  
+Modules MUST be distributed as https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html[standard JAR files].
+
+====  Identity
+
+Each module MUST have a unique identity independent of the name of the artifact _(JAR file)_ which contains it.
+
+* Identity MUST consists of name and version
+* Version part of the identity MUST have semantic meaning (see https://semver.org/[Semantic Versioning])
+** it MUST be possible to tell if а version precedes or succeeds any other version
+** it MUST be possible to tell if а version is compatible with any other version
+
+====  Responsibility
+
+Each module SHOULD have single responsibility _(see https://en.wikipedia.org/wiki/Single_responsibility_principle[Single responsibility principle])_. The following are most common responsibilities of a module:
+
+* provide <<packages, packages>> containing APIs to be consumed by other modules
+* provide implementations of <<services, services>> registered in the <<application, application>> and consumed by other modules
+* provide interaction interface(s) _(console, GUI, REST, ...)_ for the USER, OPERATOR or other systems
+* provide automated and/or scheduled background jobs
+
+====  Metadata
+
+Each module MUST contain metadata describing all requirements and capabilities that affect how it interacts with the <<application, application>> and other <<modules, modules>>. Module metadata information MUST be available in both machine and human readable form. In particular the <<application, application>> as well all other <<modules, modules>> MUST be able to access that information.
+
+=====  Requirements metadata
+
+Each module MUST provide informations about its own requirements if there are such. A module MUST declare it requires:
+
+* <<packages, package(s)>> provided by other modules
+* <<services, service(s)>> registered in the application
+* other modules
+
+A module SHOULD declare it requires:
+
+* specific environment _(CPU architecture, OS, Java version, ...)_
+* additional software or libraries
+* specific IO interfaces and/or adapters _(display, network, sensors, )_
+
+
+===== Capabilities metadata
+
+Each module MUST provide information about its own capabilities if there are such. A module MUST declare it:
+
+* exposes <<packages, package(s)>> to be used by other modules
+* registers <<services, service(s)>> in the application to by consumed by other modules
+
+
+[[packages]]
+=== Packages
+
+Packages are collections of resources _(classes, interfaces, enumerations, annotation types, ...)_  that belong together. They are implemented as  https://docs.oracle.com/javase/tutorial/java/concepts/package.html[standard Java packages].
+
+==== Visibility / Accessibility
+
+The content of each package MUST be declared in <<modules, module>>'s metadata as either
+
+ * internal for the <<modules, module>> in which it resides. That means other <<modules, module>> MUST NOT be able to directly access any resources in that package
+ * exposed to other modules. That means all resources in that package MUST be both visible to and accessible from other modules.
+
+If a package is not explicitly declared in <<modules, module>>'s metadata as exposed to other modules it MUST be treated as internal for the <<modules, module>> in which it resides.
+
+==== Versioning
+
+Each package exposed to other modules MUST have a semantically meaningful version (see https://semver.org/[Semantic Versioning]) declared in <<modules, module>>'s metadata. That data MUST be available in both machine and human readable format. It MUST be possible to tell:
+
+ * if а version precedes or succeeds any other version
+ * if а version is compatible with any other version
+
+==== Split packages
+
+Each package SHOULD exist in only one <<modules, module>> installed into / linked to the application. The same package MAY however exists in more than one version of the same <<modules, module>> if the application can handle multiple versions of the same <<modules, module>> at runtime.
+
+
+[[services]]
+=== Services
+
+A service is a discrete unit of functionality that MUST be registered in the application. Java code and other services MAY use _(locally or remotely)_ the functionality exposed by the service via it's contract(s).
+
+==== Service contract
+
+A service contract is an agreement between the the service provider(s) and service consumer(s) defining functional characteristics of the service. Service contract MUST be implemented as https://docs.oracle.com/javase/tutorial/java/concepts/interface.html[Java interface].
+
+==== Service implementation
+
+A service implementation is an internal implementation of one or many service contracts. Service implementation is a https://docs.oracle.com/javase/tutorial/java/concepts/class.html[Java class] that MUST implement one or more https://docs.oracle.com/javase/tutorial/java/concepts/interface.html[Java interfaces].
+
+==== Separation of contracts and implementations
+
+A service implementation MUST be placed in a package that is different from any of the service contracts packages. Furthermore service implementations SHOULD be placed in dedicated modules that are different from the modules providing the contracts. A service contract _(together with all shared resources)_ MUST be placed in a package that is exposed to other modules.
+
+==== Service registration
+
+The application MUST provide a way for <<modules, modules>> to register services.
+
+ * A service MUST be registered under its contract(s).
+ * The application MUST allow multiple implementations, located in one or more <<modules, modules>>, to be registered under the same service contract.
+ * The application MUST allow one implementation to be registered under many service contracts.
+ * The application SHOULD allow <<modules, modules>> to provide additional metadata for the implementations they register which MAY be used to discover and obtain specific implementation of service contract.
+
+==== Service discovery
+
+The application MUST provide means for discovering services and obtaining a reference to a service.
+
+ * The application MUST provide API to discover services registered in the application based on their contract.
+ * The application MUST provide API to obtain an instance of a single service implementation or a collection of service implementations.
+ * The application SHOULD allow service consumers to find specific service implementations by providing filters applied on the additional metadata provided during registration.
+
+==== Service lifecycle
+
+ * It SHOULD be possible to enable and disable services during the lifecycle of the application
+ * Service consumers SHOULD not assume any given service will be always available and enabled
+ * If a service can not function properly without another service, it SHOULD be disabled as soon as the service it depends on becomes unavailable or is disabled.
+ * A service that is disabled due to missing dependent services, SHOULD be enabled as soon as all dependent services become available. 
+
+
+== Functional Requirements
+
+===  Launching
+
+The application MUST allow the OPERATOR to start it via one or more of the following methods:
+
+  * from command line _(for example via `java -jar application.jar`, executable binary, shell script, ...)_
+  * by deploying the application to specific runtime _(for example JEE application server)_ and launching it via runtime's provided means
+  * by starting a virtual environment _(virtual machine, container, ...)_ containing the application
+
+===  Initial modules
+
+The application MUST allow the OPERATOR to configure _(without the need to recompile nor rebuild the application)_ which <<modules, modules>> are linked to / installed into the application at startup.
+
+===  Dynamic modules
+
+The application MAY allow the OPERATOR to dynamically install/link, update and remove/unlink <<modules, modules>> at runtime _(without the need to restart the application)_.
+
+===  Consistency check
+
+The application MUST perform consistency check on startup. It MUST NOT start if any required <<modules, modules>>, <<packages, packages>> or <<services, services>> are missing.
+The application MUST also perform consistency check if any modules are dynamically added / removed at runtime.
+
+===  Support for services
+
+The application MUST provide means for <<modules, modules>> to register, discover and consume <<services, services>>.
+
